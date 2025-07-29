@@ -350,33 +350,6 @@
             document.getElementById('successRate').textContent = successRate;
             document.getElementById('testDateTime').textContent = new Date().toLocaleString('ja-JP');
             
-            // 機能テスト結果表示
-            const functionalDiv = document.getElementById('functionalTests');
-            results.filter(r => r.type === 'functional').forEach(result => {
-                const div = document.createElement('div');
-                div.className = `test-result ${result.status}`;
-                div.innerHTML = `
-                    <div class="test-id">テスト ${result.id}</div>
-                    <div class="test-desc">${result.operation}</div>
-                    <div class="test-expected">期待: ${result.expected}</div>
-                    <div class="test-actual">実際: ${result.actual}</div>
-                `;
-                functionalDiv.appendChild(div);
-            });
-            
-            // デザインテスト結果表示
-            const designDiv = document.getElementById('designTests');
-            results.filter(r => r.type === 'design').forEach(result => {
-                const div = document.createElement('div');
-                div.className = `test-result ${result.status}`;
-                div.innerHTML = `
-                    <div class="test-id">デザイン ${result.id - 20}</div>
-                    <div class="test-desc">${result.operation}</div>
-                    <div class="test-expected">期待: ${result.expected}</div>
-                    <div class="test-actual">実際: ${result.actual}</div>
-                `;
-                designDiv.appendChild(div);
-            });
             
             // プログレスバー更新
             document.getElementById('progressFill').style.width = `${successRate}%`;
