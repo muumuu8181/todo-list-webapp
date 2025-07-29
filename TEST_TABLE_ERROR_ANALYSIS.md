@@ -5,23 +5,60 @@ test.htmlでテーブル形式のテスト結果が正しく表示されなか�
 
 ## 🐛 根本原因
 
-### 1. JavaScriptロジックの不整合
+### 1. JavaScriptロジックの不整合（最初のバージョン）
 ```javascript
-// 問題のコード：
+// 問題のコード（test.html:354-379行目）：
+// 機能テスト結果表示
 const functionalDiv = document.getElementById('functionalTests');
+results.filter(r => r.type === 'functional').forEach(result => {
+    const div = document.createElement('div');
+    div.className = `test-result ${result.status}`;
+    div.innerHTML = `...`;
+    functionalDiv.appendChild(div);  // ← ここでエラー発生！
+});
+
+// デザインテスト結果表示
 const designDiv = document.getElementById('designTests');
-// これらのDOM要素が存在しないのに参照しようとしていた
+// 同様の処理...
 ```
 
+**何が起きていたか：**
+- `document.getElementById('functionalTests')` → **null** を返す
+- `null.appendChild()` → **TypeError: Cannot read property 'appendChild' of null**
+- エラーで処理が中断し、その後のテーブル生成コード（381-399行目）が実行されない
+
 ### 2. 二重の表示ロジック
-- テーブル（`<table>`）とdiv要素への結果追加が混在
-- 存在しないDOM要素（`functionalTests`、`designTests`）への追加処理
-- テーブルのtbodyへの追加処理が実行されない状態
+```javascript
+// 1つ目：DIV要素への追加（存在しない要素を参照）
+functionalDiv.appendChild(div);  // エラー
+
+// 2つ目：テーブルへの追加（実行されない）
+const tableBody = document.getElementById('testTableBody');
+results.forEach(result => {
+    const row = document.createElement('tr');
+    // ...
+    tableBody.appendChild(row);
+});
+```
 
 ### 3. HTMLテンプレートの不一致
-- JavaScriptは動的にテーブルを生成しようとしていた
-- しかし、必要なDOM要素が存在せず、エラーで処理が中断
-- 結果的にテーブルの`<tbody>`が空のまま表示
+**HTMLには以下の要素しか存在しなかった：**
+```html
+<table id="testTable">
+    <tbody id="testTableBody">
+    </tbody>
+</table>
+```
+
+**しかしJavaScriptは存在しない要素を探していた：**
+- `functionalTests` （存在しない）
+- `designTests` （存在しない）
+
+### 4. エラーの連鎖
+1. 存在しない要素への参照 → nullエラー
+2. JavaScriptの実行が中断
+3. テーブルへのデータ追加処理が実行されない
+4. 結果：空のテーブルが表示される（ヘッダーのみ）
 
 ## 📝 修正内容
 
@@ -41,19 +78,47 @@ const designDiv = document.getElementById('designTests');
    </table>
    ```
 
+## 🔍 実際の症状（ユーザーから見た現象）
+
+### ブラウザで表示された内容
+```
+📋 ToDo List App テスト結果レポート
+🎯 テスト実行サマリー
+[統計情報]
+
+📊 テスト結果詳細
+┌─────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│ ID  │ カテゴリ │ テスト内容│ 期待結果 │ 実際の結果│ ステータス│
+├─────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│     │          │          │          │          │          │
+└─────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+（空のテーブル）
+```
+
+### ブラウザコンソールのエラー
+```
+Uncaught TypeError: Cannot read property 'appendChild' of null
+    at test.html:361
+    at Array.forEach (<anonymous>)
+    at displayResults (test.html:355)
+```
+
 ## 💡 教訓と改善点
 
 ### 1. デバッグの重要性
-- ブラウザのコンソールエラーを確認すべきだった
-- `getElementById`で存在しない要素を参照するとnullエラーが発生
+- **ブラウザのコンソールエラーを最初に確認すべきだった**
+  - F12キー → Consoleタブでエラー確認
+  - エラーメッセージから問題箇所を特定
+- `getElementById`で存在しない要素を参照すると**必ずnullが返る**
 
 ### 2. シンプルな実装の価値
-- 静的なデータは静的に実装する方が確実
-- 不必要な動的処理は避ける
+- 静的なデータ（100件の固定テストケース）は静的に実装する方が確実
+- 動的生成は本当に必要な場合のみ使用
 
-### 3. 段階的な実装
+### 3. 段階的な実装とテスト
 - まず静的HTMLで表示を確認
-- その後、必要に応じて動的処理を追加
+- 動作確認後、必要に応じて動的処理を追加
+- **各段階でコンソールエラーをチェック**
 
 ## 🚀 今後の改善提案
 
